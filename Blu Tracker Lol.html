@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blu Champion Tracker — Multi-Modos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #090d12;
+      color: #e2e8f0;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    .champ-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .champ-card:hover {
+      transform: translateY(-3px);
+    }
+    .champ-card.played .portrait {
+      filter: grayscale(100%) opacity(0.4);
+    }
+    .rolling-anim {
+      animation: pulseGlow 0.15s infinite alternate;
+    }
+    @keyframes pulseGlow {
+      from { transform: scale(0.98); opacity: 0.8; }
+      to { transform: scale(1.02); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="min-h-screen custom-scrollbar flex flex-col">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-cyan-500/20">
+          <i class="fa-solid fa-trophy"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            Blu Champion Tracker
+            <span id="versionBadge" class="text-xs font-normal px-2 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">Carregando...</span>
+          </h1>
+          <p class="text-xs text-slate-400">Gerencie o seu progresso de campeões por modos de jogo</p>
+        </div>
+      </div>
+
+      <!-- Ações de Backup -->
+      <div class="flex items-center gap-2 text-sm">
+        <button onclick="exportData()" title="Exportar dados" class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 flex items-center gap-2 transition">
+          <i class="fa-solid fa-download text-cyan-400"></i> <span class="hidden sm:inline">Exportar</span>
+        </button>
+        <button onclick="document.getElementById('importFile').click()" title="Importar dados" class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 flex items-center gap-2 transition">
+          <i class="fa-solid fa-upload text-cyan-400"></i> <span class="hidden sm:inline">Importar</span>
+        </button>
+        <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+      </div>
+    </div>
+  </header>
+
+  <!-- Navegação de Abas / Modos -->
+  <div class="bg-slate-900/60 border-b border-slate-800/80 sticky top-[73px] z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 flex items-center justify-between gap-4 overflow-x-auto custom-scrollbar py-2">
+      <div id="tabsContainer" class="flex items-center gap-2">
+        <!-- Abas injetadas via JS -->
+      </div>
+      <button onclick="openNewTrackerModal()" class="px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 shrink-0 shadow-md transition">
+        <i class="fa-solid fa-plus"></i> NOVO MODO
+      </button>
+    </div>
+  </div>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+
+    <!-- Conteúdo da Visão Geral -->
+    <div id="dashboardView" class="space-y-6">
+      <div class="bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-950 p-6 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden">
+        <div class="relative z-10 max-w-2xl">
+          <h2 class="text-2xl font-extrabold text-white mb-2">Painel Geral de Progresso</h2>
+          <p class="text-slate-400 text-sm mb-4">Acompanhe seu desempenho geral e o progresso individual em cada um dos modos do League of Legends.</p>
+          <div class="flex items-center gap-4">
+            <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80">
+              <span class="text-xs text-slate-500 block">Total de Campeões</span>
+              <span id="dashTotalChamps" class="text-2xl font-black text-cyan-400">173</span>
+            </div>
+            <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80">
+              <span class="text-xs text-slate-500 block">Modos Ativos</span>
+              <span id="dashTotalModes" class="text-2xl font-black text-blue-400">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="dashGrid">
+        <!-- Cards dos modos injetados via JS -->
+      </div>
+    </div>
+
+    <!-- Conteúdo do Tracker Selecionado -->
+    <div id="trackerContainer" class="space-y-6 hidden">
+      
+      <!-- Cabeçalho do Modo Ativo & Status -->
+      <div class="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3">
+            <h2 id="currentTrackerTitle" class="text-2xl font-extrabold text-white">Modo</h2>
+            <button onclick="renameCurrentTracker()" class="text-xs text-slate-500 hover:text-cyan-400"><i class="fa-solid fa-pen"></i> Editar</button>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">Marque os campeões conforme for jogando nesta fila</p>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-center min-w-[90px]">
+            <span class="text-xs text-slate-500 block">Jogados</span>
+            <b id="activeDone" class="text-lg font-bold text-emerald-400">0</b>
+          </div>
+          <div class="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-center min-w-[90px]">
+            <span class="text-xs text-slate-500 block">Faltam</span>
+            <b id="activeLeft" class="text-lg font-bold text-amber-400">0</b>
+          </div>
+          <div class="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-center min-w-[90px]">
+            <span class="text-xs text-slate-500 block">Conclusão</span>
+            <b id="activePct" class="text-lg font-bold text-cyan-400">0%</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Progresso do Modo -->
+      <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden border border-slate-800">
+        <div id="activeProgressBar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-300 w-0"></div>
+      </div>
+
+      <!-- Roleta de Sorteio -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h3 class="font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-dice text-cyan-400"></i> Roleta de Campeões
+            </h3>
+            <p class="text-xs text-slate-400">Sorteia aleatoriamente um campeão pendente neste modo</p>
+          </div>
+          <button id="spinBtn" onclick="spinRoulette()" class="px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-cyan-600/20 disabled:opacity-50 disabled:cursor-not-allowed">
+            SORTEAR CAMPEÃO
+          </button>
+        </div>
+
+        <div id="rouletteResult" class="hidden bg-slate-950 border border-cyan-500/30 rounded-xl p-4 flex items-center gap-4 transition">
+          <img id="rouletteImg" class="w-16 h-16 rounded-lg object-cover border border-cyan-500/50" src="" alt="">
+          <div>
+            <span class="text-xs text-slate-400 block uppercase tracking-wider font-semibold">Próximo Desafio</span>
+            <h4 id="rouletteName" class="text-xl font-extrabold text-white">—</h4>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Ferramentas / Filtros -->
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[240px]">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+          <input id="searchInput" oninput="renderActiveTracker()" type="text" placeholder="Buscar campeão..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 transition">
+        </div>
+
+        <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+          <button onclick="setFilter('all')" id="filterAll" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Todos</button>
+          <button onclick="setFilter('todo')" id="filterTodo" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Faltam</button>
+          <button onclick="setFilter('done')" id="filterDone" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Jogados</button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="resetCurrentTracker()" title="Resetar este modo" class="px-3 py-2 bg-slate-900 hover:bg-amber-950/40 hover:text-amber-400 text-slate-400 border border-slate-800 hover:border-amber-800/50 rounded-xl text-xs font-medium transition">
+            <i class="fa-solid fa-rotate-left"></i> Resetar
+          </button>
+          <button onclick="deleteCurrentTracker()" title="Excluir este modo" class="px-3 py-2 bg-slate-900 hover:bg-rose-950/40 hover:text-rose-400 text-slate-400 border border-slate-800 hover:border-rose-800/50 rounded-xl text-xs font-medium transition">
+            <i class="fa-solid fa-trash-can"></i> Excluir
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid de Campeões -->
+      <div id="championsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+        <!-- Injetado via JS -->
+      </div>
+      
+      <div id="emptyGridState" class="hidden text-center py-12 text-slate-500 text-sm">
+        Nenhum campeão encontrado com o filtro atual.
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Criar Novo Tracker -->
+  <div id="newTrackerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+      <h3 class="text-xl font-bold text-white flex items-center gap-2">
+        <i class="fa-solid fa-square-plus text-cyan-400"></i> Criar Novo Tracker
+      </h3>
+      <p class="text-xs text-slate-400">Digite o nome do novo modo de jogo para criar um progresso do zero (ex: Arena, Normal, Flex, Clash).</p>
+      
+      <div>
+        <label class="text-xs font-semibold text-slate-300 block mb-1">Nome do Modo</label>
+        <input id="newTrackerNameInput" type="text" placeholder="Ex: Arena 2v2v2v2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition">
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeNewTrackerModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition">Cancelar</button>
+        <button onclick="confirmCreateTracker()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold transition">Criar Tracker</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ddragonVersion = "14.20.1";
+    let champions = [];
+    let trackers = {};
+    let activeTab = "dashboard";
+    let currentFilter = "all";
+    let isSpinning = false;
+
+    // Inicialização
+    async function init() {
+      await fetchVersionAndChampions();
+      loadStoredData();
+      renderTabs();
+      switchTab(activeTab);
+    }
+
+    // Busca versão mais recente da Riot e os 173 campeões
+    async function fetchVersionAndChampions() {
+      try {
+        const vRes = await fetch("https://ddragon.leagueoflegends.com/api/versions.json");
+        const versions = await vRes.json();
+        ddragonVersion = versions[0];
+        document.getElementById("versionBadge").textContent = `Patch ${ddragonVersion}`;
+
+        const cRes = await fetch(`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/data/pt_BR/champion.json`);
+        const cData = await cRes.json();
+        champions = Object.values(cData.data).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+        document.getElementById("dashTotalChamps").textContent = champions.length;
+      } catch (err) {
+        console.error("Erro ao carregar dados da Riot:", err);
+        document.getElementById("versionBadge").textContent = "Erro ao carregar";
+      }
+    }
+
+    // Carrega do localStorage ou inicia com modos padrão
+    function loadStoredData() {
+      const saved = localStorage.getItem("lol_multi_trackers_data");
+      if (saved) {
+        try {
+          trackers = JSON.parse(saved);
+        } catch (e) {
+          trackers = {};
+        }
+      }
+
+      // Se estiver vazio ou for primeira vez, cria modos padrão
+      if (Object.keys(trackers).length === 0) {
+        trackers = {
+          "Bots": {},
+          "ARAM": {},
+          "Normal": {},
+          "Ranked": {}
+        };
+        saveData();
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem("lol_multi_trackers_data", JSON.stringify(trackers));
+    }
+
+    // Renderiza Abas de Navegação
+    function renderTabs() {
+      const container = document.getElementById("tabsContainer");
+      container.innerHTML = "";
+
+      // Botão Dashboard
+      const dashBtn = document.createElement("button");
+      dashBtn.className = `px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
+        activeTab === 'dashboard' 
+          ? 'bg-slate-800 text-cyan-400 border border-slate-700 shadow' 
+          : 'text-slate-400 hover:text-white hover:bg-slate-900'
+      }`;
+      dashBtn.innerHTML = `<i class="fa-solid fa-chart-pie"></i> INÍCIO`;
+      dashBtn.onclick = () => switchTab('dashboard');
+      container.appendChild(dashBtn);
+
+      // Botões dos Trackers
+      Object.keys(trackers).forEach(modeKey => {
+        const btn = document.createElement("button");
+        const isActive = activeTab === modeKey;
+        btn.className = `px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
+          isActive 
+            ? 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-500/10' 
+            : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+        }`;
+        
+        const count = Object.keys(trackers[modeKey] || {}).length;
+        btn.innerHTML = `<span>${modeKey}</span> <span class="text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-cyan-500/30 text-cyan-200' : 'bg-slate-800 text-slate-400'}">${count}/${champions.length}</span>`;
+        btn.onclick = () => switchTab(modeKey);
+        container.appendChild(btn);
+      });
+
+      document.getElementById("dashTotalModes").textContent = Object.keys(trackers).length;
+    }
+
+    // Troca de Aba
+    function switchTab(tabKey) {
+      activeTab = tabKey;
+      renderTabs();
+
+      const dashView = document.getElementById("dashboardView");
+      const trackerContainer = document.getElementById("trackerContainer");
+
+      if (tabKey === 'dashboard') {
+        dashView.classList.remove("hidden");
+        trackerContainer.classList.add("hidden");
+        renderDashboard();
+      } else {
+        dashView.classList.add("hidden");
+        trackerContainer.classList.remove("hidden");
+        document.getElementById("currentTrackerTitle").textContent = tabKey;
+        document.getElementById("rouletteResult").classList.add("hidden");
+        renderActiveTracker();
+      }
+    }
+
+    // Renderiza o Dashboard Inicial
+    function renderDashboard() {
+      const grid = document.getElementById("dashGrid");
+      grid.innerHTML = "";
+
+      Object.keys(trackers).forEach(modeKey => {
+        const playedMap = trackers[modeKey] || {};
+        const done = Object.keys(playedMap).length;
+        const total = champions.length || 173;
+        const pct = ((done / total) * 100).toFixed(1);
+
+        const card = document.createElement("div");
+        card.className = "bg-slate-900/90 border border-slate-800 hover:border-slate-700 p-5 rounded-2xl space-y-4 cursor-pointer transition group";
+        card.onclick = () => switchTab(modeKey);
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <h3 class="font-extrabold text-lg text-white group-hover:text-cyan-400 transition">${modeKey}</h3>
+            <span class="text-xs font-bold text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">${pct}%</span>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs text-slate-400 mb-1.5">
+              <span>Progresso</span>
+              <span class="font-semibold text-slate-200">${done} / ${total}</span>
+            </div>
+            <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
+              <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-300" style="width: ${pct}%"></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs text-slate-500">
+            <span>Acessar Modo</span>
+            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition text-cyan-400"></i>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Renderiza os campeões do modo ativo
+    function renderActiveTracker() {
+      if (!champions.length || !trackers[activeTab]) return;
+
+      const playedMap = trackers[activeTab];
+      const search = document.getElementById("searchInput").value.trim().toLowerCase();
+      
+      const filtered = champions.filter(c => {
+        const isDone = !!playedMap[c.id];
+        const matchesSearch = c.name.toLowerCase().includes(search);
+        const matchesFilter = currentFilter === 'all' || 
+          (currentFilter === 'done' && isDone) || 
+          (currentFilter === 'todo' && !isDone);
+        return matchesSearch && matchesFilter;
+      });
+
+      const grid = document.getElementById("championsGrid");
+      const emptyState = document.getElementById("emptyGridState");
+      grid.innerHTML = "";
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove("hidden");
+      } else {
+        emptyState.classList.add("hidden");
+        filtered.forEach(c => {
+          const isDone = !!playedMap[c.id];
+          const card = document.createElement("div");
+          card.className = `champ-card relative bg-slate-900 border rounded-xl overflow-hidden cursor-pointer select-none ${
+            isDone ? 'played border-slate-800/80 bg-slate-950' : 'border-slate-800 hover:border-cyan-500/50'
+          }`;
+          card.onclick = () => toggleChampion(c.id);
+
+          const imgUrl = `https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/champion/${c.image.full}`;
+
+          card.innerHTML = `
+            <div class="relative aspect-square overflow-hidden bg-slate-950">
+              <img src="${imgUrl}" alt="${c.name}" class="portrait w-full h-full object-cover transition duration-300" loading="lazy">
+              <div class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                isDone ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-900/80 text-slate-500 border border-slate-700'
+              }">
+                ${isDone ? '<i class="fa-solid fa-check"></i>' : ''}
+              </div>
+            </div>
+            <div class="p-2 text-center">
+              <span class="text-xs font-bold text-slate-200 block truncate">${c.name}</span>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      }
+
+      updateActiveStats();
+    }
+
+    // Marcar/Desmarcar Campeão
+    function toggleChampion(champId) {
+      if (!trackers[activeTab]) return;
+      
+      if (trackers[activeTab][champId]) {
+        delete trackers[activeTab][champId];
+      } else {
+        trackers[activeTab][champId] = true;
+      }
+
+      saveData();
+      renderActiveTracker();
+      renderTabs();
+    }
+
+    // Atualiza estatísticas do cabeçalho
+    function updateActiveStats() {
+      const total = champions.length;
+      const playedMap = trackers[activeTab] || {};
+      const done = Object.keys(playedMap).length;
+      const left = total - done;
+      const pct = total ? ((done / total) * 100).toFixed(1) : 0;
+
+      document.getElementById("activeDone").textContent = done;
+      document.getElementById("activeLeft").textContent = left;
+      document.getElementById("activePct").textContent = `${pct}%`;
+      document.getElementById("activeProgressBar").style.width = `${pct}%`;
+    }
+
+    // Filtros de visualização
+    function setFilter(filterType) {
+      currentFilter = filterType;
+      ['All', 'Todo', 'Done'].forEach(f => {
+        const btn = document.getElementById(`filter${f}`);
+        if (f.toLowerCase() === filterType) {
+          btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 text-white shadow";
+        } else {
+          btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
+        }
+      });
+      renderActiveTracker();
+    }
+
+    // Roleta
+    function spinRoulette() {
+      if (isSpinning) return;
+      const playedMap = trackers[activeTab] || {};
+      const unplayed = champions.filter(c => !playedMap[c.id]);
+
+      if (unplayed.length === 0) {
+        alert("Parabéns! Você já completou todos os campeões neste modo!");
+        return;
+      }
+
+      isSpinning = true;
+      const spinBtn = document.getElementById("spinBtn");
+      const rouletteResult = document.getElementById("rouletteResult");
+      const rouletteImg = document.getElementById("rouletteImg");
+      const rouletteName = document.getElementById("rouletteName");
+
+      spinBtn.disabled = true;
+      rouletteResult.classList.remove("hidden");
+      rouletteResult.classList.add("rolling-anim");
+
+      let duration = 2000;
+      let start = performance.now();
+
+      function animate(now) {
+        let elapsed = now - start;
+        let randomChamp = unplayed[Math.floor(Math.random() * unplayed.length)];
+        
+        rouletteImg.src = `https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/champion/${randomChamp.image.full}`;
+        rouletteName.textContent = randomChamp.name;
+
+        if (elapsed < duration) {
+          requestAnimationFrame(animate);
+        } else {
+          rouletteResult.classList.remove("rolling-anim");
+          isSpinning = false;
+          spinBtn.disabled = false;
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    // Modal & Gestão de Modos
+    function openNewTrackerModal() {
+      document.getElementById("newTrackerNameInput").value = "";
+      document.getElementById("newTrackerModal").classList.remove("hidden");
+    }
+
+    function closeNewTrackerModal() {
+      document.getElementById("newTrackerModal").classList.add("hidden");
+    }
+
+    function confirmCreateTracker() {
+      const name = document.getElementById("newTrackerNameInput").value.trim();
+      if (!name) return;
+
+      if (trackers[name]) {
+        alert("Já existe um tracker com esse nome!");
+        return;
+      }
+
+      trackers[name] = {};
+      saveData();
+      closeNewTrackerModal();
+      switchTab(name);
+    }
+
+    function renameCurrentTracker() {
+      const newName = prompt("Digite o novo nome para este tracker:", activeTab);
+      if (!newName || newName.trim() === "" || newName === activeTab) return;
+
+      const trimmed = newName.trim();
+      trackers[trimmed] = trackers[activeTab];
+      delete trackers[activeTab];
+
+      saveData();
+      switchTab(trimmed);
+    }
+
+    function resetCurrentTracker() {
+      if (confirm(`Tem certeza que deseja desmarcar TODOS os campeões do modo "${activeTab}"?`)) {
+        trackers[activeTab] = {};
+        saveData();
+        renderActiveTracker();
+        renderTabs();
+      }
+    }
+
+    function deleteCurrentTracker() {
+      if (confirm(`Tem certeza que deseja excluir o modo "${activeTab}"?`)) {
+        delete trackers[activeTab];
+        saveData();
+        switchTab('dashboard');
+      }
+    }
+
+    // Backup: Importar / Exportar JSON
+    function exportData() {
+      const jsonStr = JSON.stringify(trackers, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lol_tracker_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (typeof imported === 'object' && imported !== null) {
+            trackers = imported;
+            saveData();
+            switchTab('dashboard');
+            alert("Progresso importado com sucesso!");
+          }
+        } catch (err) {
+          alert("Arquivo JSON inválido.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    init();
+  </script>
+</body>
+</html>
